@@ -8,9 +8,10 @@ typedef void* Persona;
 extern void inicializarSistema();
 extern void limpiarSistema();
 extern Persona crearPersona(const char* nombre, int edad, float altura);
-extern void mostrarPersona(Persona p);
 extern void mostrarTodasLasPersonas();
 extern void liberarPersona(Persona p);
 extern int obtenerCantidadPersonas();
+extern Persona obtenerPersonaPorIndice(int indice);
+extern void mostrarPersonaPorIndice(int indice);
 
 #endif

@@ -15,7 +15,8 @@ section .bss
 section .text
     global inicializarSistema, limpiarSistema, crearPersona
     global mostrarPersona, mostrarTodasLasPersonas, liberarPersona
-    global obtenerCantidadPersonas
+    global liberarPersonaInterna, obtenerCantidadPersonas, obtenerPersonaPorIndice
+    global mostrarPersonaPorIndice
     extern printf, malloc, free, strlen, strcpy
 
 ; Estructura Persona en memoria:
@@ -82,7 +83,7 @@ crearPersona:
     mov esi, eax                    ; esi = nueva estructura
     
     mov dword [esi+4], 0            ; edad inicial 0
-    mov dword [esi+8], 0            ; altura inicial 0
+    mov dword [esi+8], 0         ; altura inicial 0
     mov dword [esi+12], 0           ; siguiente = NULL
     
     mov eax, [ebp+8]                ; nombre original
@@ -154,13 +155,17 @@ mostrarPersona:
     mov eax, [ebp+8]                ; eax = persona
     test eax, eax
     jz .fin
-    
-    push dword [eax+8]              ; altura
+
+    ;convertir a float a double para  printf
+    ;altura
+    fld dword [eax+8]               ;cargar float (32 bits) a ST(0)
+    sub esp, 8                      ;Resevar espacio para double (64 bits)
+    fstp qword [esp]                ;Almacenar como double (64 bits) en la pila
     push dword [eax+4]              ; edad
     push dword [eax]                ; nombre
     push fmt_persona
     call printf
-    add esp, 16
+    add esp, 20                     ;Limpiar pila: 4+4+8=16, mas 4 del formato = 20 
     
 .fin:
     pop ebp
@@ -172,6 +177,7 @@ mostrarTodasLasPersonas:
     mov ebp, esp
     push ebx
     
+
     push dword [cantidad_personas]
     push fmt_header
     call printf
@@ -183,12 +189,15 @@ mostrarTodasLasPersonas:
     test ebx, ebx
     jz .fin
     
-    push dword [ebx+8]              ; altura
+    ; altura
+    fld dword [ebx+8]               ;Cargar float
+    sub esp, 8                      ;Resevar espacio para double 
+    fstp qword [esp]                ;Almacenar como double 
     push dword [ebx+4]              ; edad
     push dword [ebx]                ; nombre
     push fmt_persona
     call printf
-    add esp, 16
+    add esp, 20
     
     mov ebx, [ebx+12]
     jmp .mostrar_lista
@@ -272,5 +281,64 @@ obtenerCantidadPersonas:
     push ebp
     mov ebp, esp
     mov eax, [cantidad_personas]
+    pop ebp
+    ret
+
+obtenerPersonaPorIndice:
+    push ebp
+    mov ebp, esp
+    push ebx
+    push esi
+    
+    mov eax, [ebp+8]        ; eax = indice solicitado
+    cmp eax, 0
+    jl .indice_invalido
+    
+    mov ebx, [primera_persona]  ; ebx = persona actual
+    mov ecx, 0                   ; ecx = contador
+    
+.buscar:
+    test ebx, ebx
+    jz .indice_invalido
+    
+    cmp ecx, eax
+    je .encontrado
+    
+    mov ebx, [ebx+12]        ; siguiente persona
+    inc ecx
+    jmp .buscar
+
+.encontrado:
+    mov eax, ebx             ; retornar persona encontrada
+    jmp .fin
+
+.indice_invalido:
+    xor eax, eax             ; retornar NULL
+
+.fin:
+    pop esi
+    pop ebx
+    pop ebp
+    ret
+
+; void mostrarPersonaPorIndice(int indice)
+mostrarPersonaPorIndice:
+    push ebp
+    mov ebp, esp
+    push ebx
+    
+    push dword [ebp+8]       ; pasar índice
+    call obtenerPersonaPorIndice
+    add esp, 4
+    
+    test eax, eax
+    jz .fin                  ; si es NULL, no hacer nada
+    
+    push eax                 ; mostrar la persona encontrada
+    call mostrarPersona
+    add esp, 4
+
+.fin:
+    pop ebx
     pop ebp
     ret
